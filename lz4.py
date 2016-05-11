@@ -5,99 +5,6 @@ import os
 import const
 from enum import Enum, unique
 
-
-class Lz4StreamTInternal(object):
-    hash_table = []
-    # current_offset
-    # init_check
-    # dictionary
-    # buffer_start
-    # dict_size
-
-class Lz4:
-    def __init__(self, inputStr):
-        self.inputStr = inputStr  # 输入流
-        self.searchSize = 5    # 搜索缓冲区(已编码区)大小
-        self.aheadSize = 3     # lookAhead缓冲区（待编码区）大小
-        self.windSpiltIndex = 0  # lookHead缓冲区开始的索引
-        self.move = 0
-        self.notFind = -1   # 没有找到匹配字符串
-
-    # 得到滑动窗口的末端索引
-    def getWinEndIndex(self):
-        return self.windSpiltIndex + self.aheadSize
-
-    # 得到滑动窗口的始端索引
-    def getWinStartIndex(self):
-        return self.windSpiltIndex - self.searchSize
-
-    # 判断lookHead缓冲区是否为空
-    def isLookHeadEmpty(self):
-        return True if self.windSpiltIndex + self.move > len(self.inputStr) - 1 else False
-
-def compress(self):
-        step = 0
-        print("Step   Position   Match   Output")
-        while not self.isLookHeadEmpty():
-            # 1.滑动窗口
-            self.winMove()
-            # 2. 得到最大匹配串的偏移值和长度
-            (offset, matchLen) = self.findMaxMatch()
-            # 3.设置窗口下一步需要滑动的距离
-            self.setMoveSteps(matchLen)
-            if matchLen == 0:
-                # 匹配为0，说明无字符串匹配，输出下一个需要编码的字母
-                nextChar = self.inputStr[self.windSpiltIndex]
-                result = (step, self.windSpiltIndex, '-',  '(0,0)' + nextChar)
-            else:
-                result = (step, self.windSpiltIndex, self.inputStr[self.windSpiltIndex - offset: self.windSpiltIndex - offset + matchLen], '(' + str(offset) + ',' + str(matchLen) + ')')
-            # 4.输出结果
-            self.output(result)
-            step += 1        # 仅用来设置第几步
-
-def winMove(self):
-        self.windSpiltIndex = self.windSpiltIndex + self.move
-
-    # 寻找最大匹配字符并返回相对于窗口分界点的偏移值和匹配长度
-    def findMaxMatch(self):
-        matchLen = 0
-        offset = 0
-        minEdge = self.minEdge() + 1  # 得到编码区域的右边界
-        # 遍历待编码区，寻找最大匹配串
-        for i in range(self.windSpiltIndex + 1, minEdge):
-            offsetTemp = self.searchBufferOffest(i)
-            if offsetTemp == self.notFind:
-                return (offset, matchLen)
-            offset = offsetTemp  # 偏移值
-
-            matchLen = matchLen + 1  # 每找到一个匹配串，加1
-
-        return offset, matchLen
-
-    # 入参字符串是否存在于搜索缓冲区，如果存在，返回匹配字符串的起始索引
-    def searchBufferOffest(self, i):
-        searchStart = self.getWinStartIndex()
-        searchEnd = self.windSpiltIndex
-        # 下面几个if是处理开始时的特殊情况
-        if searchEnd < 1:
-            return self.notFind
-        if searchStart < 0:
-            searchStart = 0
-            if searchEnd == 0:
-                searchEnd = 1
-        searchStr = self.inputStr[searchStart: searchEnd]  # 搜索区字符串
-        findIndex = searchStr.find(self.inputStr[self.windSpiltIndex : i])
-        if findIndex == -1:
-            return -1
-        return len(searchStr) - findIndex
-
-    # 设置下一次窗口需要滑动的步数
-    def setMoveSteps(self, matchLen):
-        if matchLen == 0:
-            self.move = 1
-        else:
-            self.move = matchLen
-
 @unique
 class LimitedOutputDirective(Enum):
     notLimited = 0
@@ -229,12 +136,6 @@ def lz4_get_position(p, table_base, table_type_t, src_base):
 # compress
 def lz4_compress_generic(ctx, source, dest, input_size, max_output_size):
     const.ip = const.source
-    # const BYTE* base;
-    # const BYTE* lowLimit;
-    # const BYTE* const lowRefLimit = ip - dictPtr->dictSize;
-    # const BYTE* const dictionary = dictPtr->dictionary;
-    # const BYTE* const dictEnd = dictionary + dictPtr->dictSize;
-    # const size_t dictDelta = dictEnd - (const BYTE*)source;
     const.anchor = const.source
     const.iend = const.ip + inputSize
     const.mflimit = const.iend - const.mf_limit
@@ -298,9 +199,93 @@ def lz4_compress_generic(ctx, source, dest, input_size, max_output_size):
     end = op + length
     lz4_wild_copy(op, anchor, end)
     op = end
-# 向后扩展未加入，未找到对应部分
+# 向后扩展未加入
 #
 
+class Lz4:
+    def __init__(self, inputStr):
+        self.inputStr = inputStr  # 输入流
+        self.searchSize = 5    # 已编码区大小
+        self.aheadSize = 3     # 待编码区大小
+        self.windSpiltIndex = 0  # 待编码缓冲区开始的索引
+        self.move = 0
+        self.notFind = -1   # 没有找到匹配字符串
+
+    # 得到滑动窗口的末端索引
+    def get_win_end_index(self):
+        return self.windSpiltIndex + self.aheadSize
+
+    # 得到滑动窗口的始端索引
+    def get_win_start_index(self):
+        return self.windSpiltIndex - self.searchSize
+
+    # 判断lookHead缓冲区是否为空
+    def is_look_head_empty(self):
+        return True if self.windSpiltIndex + self.move > len(self.inputStr) - 1 else False
+
+def encode(self):
+        step = 0
+        print("Step   Position   Match   Output")
+        while not self.is_look_head_empty():
+            # 1.滑动窗口
+            self.winMove()
+            # 2. 得到最大匹配串的偏移值和长度
+            (offset, matchlen) = self.find_max_match()
+            # 3.设置窗口下一步需要滑动的距离
+            self.set_move_steps(matchlen)
+            if matchlen == 0:
+                # 匹配为0，说明无字符串匹配，输出下一个需要编码的字母
+                nextChar = self.inputStr[self.windSpiltIndex]
+                result = (step, self.windSpiltIndex, '-',  '(0,0)' + nextChar)
+            else:
+                result = (step, self.windSpiltIndex, self.inputStr[self.windSpiltIndex - offset: self.windSpiltIndex - offset + matchLen], '(' + str(offset) + ',' + str(matchLen) + ')')
+            # 4.输出结果
+            self.output(result)
+            step += 1        # 仅用来设置第几步
+
+def win_move(self):
+        self.windSpiltIndex = self.windSpiltIndex + self.move
+
+    # 寻找最大匹配字符并返回相对于窗口分界点的偏移值和匹配长度
+
+    def find_max_match(self):
+        matchlen = 0
+        offset = 0
+        minEdge = self.minEdge() + 1  # 得到编码区域的右边界
+        # 遍历待编码区，寻找最大匹配串
+        for i in range(self.windSpiltIndex + 1, minEdge):
+            offsetTemp = self.searchBufferOffest(i)
+            if offsetTemp == self.notFind:
+                return (offset, matchlen)
+            offset = offsetTemp  # 偏移值
+
+            matchlen += 1  # 每找到一个匹配串，加1
+
+        return offset, matchlen
+
+    # 入参字符串是否存在于搜索缓冲区，如果存在，返回匹配字符串的起始索引
+    def search_buffer_offset(self, i):
+        searchStart = self.getWinStartIndex()
+        searchEnd = self.windSpiltIndex
+        # 下面几个if是处理开始时的特殊情况
+        if searchEnd < 1:
+            return self.notFind
+        if searchStart < 0:
+            searchStart = 0
+            if searchEnd == 0:
+                searchEnd = 1
+        searchStr = self.inputStr[searchStart: searchEnd]  # 搜索区字符串
+        findIndex = searchStr.find(self.inputStr[self.windSpiltIndex : i])
+        if findIndex == -1:
+            return -1
+        return len(searchStr) - findIndex
+
+    # 设置下一次窗口需要滑动的步数
+    def set_move_steps(self, matchlen):
+        if matchlen == 0:
+            self.move = 1
+        else:
+            self.move = matchlen
 
 def last_literals(iend, anchor, op, dest, limitedOutput):
     last_run = iend - anchor
